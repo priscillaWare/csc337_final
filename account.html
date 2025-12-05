@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            h1{
+                text-align: center;
+            }
+
+            div{
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body onload="checkIfLoggedIn()">
+        <h1>Readitd.</h1>
+        <p id="Greeting Message">${greetings_message}</p>
+        <p id="loginlink" style="display:inline">It seems you are not logged in, please login </p> <a href="login.html">login</a>
+       
+        <h3>Here are the books you've read so far:</h3>
+        <div id="Books">
+        </div>
+        <button onclick="addBook()">Add a book</button>
+
+        <h3>Books to read:</h3>
+        <div id="goals">
+        </div>
+        <button onclick="AddGoal">Add a book to Read</button>
+
+    </body>
+</html>
