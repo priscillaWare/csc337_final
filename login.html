@@ -1,20 +1,68 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <style>
-            h1 {
-                text-align: center;
+<head>
+    <script>
+        async function login() {
+            var username = document.getElementById("username").value.trim();
+            var password = document.getElementById("password").value.trim();
+            var error = document.getElementById("error");
+
+            error.innerText = "";
+
+            // Correct empty check
+            if (username === "" || password === "") {
+                error.innerText = "Username or password cannot be empty";
+                return;
             }
-        </style>
-    </head>
-    <body>
-        <h1>Hello, Welcome To Readitd.</h1>
-        <form action="login_action.html">
-            <label for="username">Username: </label><input type="text" name="username" id="username"><br>
-            <label for="password">Password: </label><input type="text" name="paswword" id="password"> <br>
-            <button type="submit">LOGIN</button>
-        </form>
-        <br>
-        <p style="display:inline">If you don't have any account, you can create one </p><a href="create.html">here</a>
-    </body>
+
+            try {
+                var res = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                var data = await res.json();
+
+                if (!res.ok) {
+                    error.innerText = data.error || "Login failed";
+                    return;
+                }
+
+                localStorage.setItem("username", username);
+
+                error.innerText = "Success!"
+
+            } catch (err) {
+                console.log(err);
+                error.innerText = "Server error.";
+            }
+        }
+    </script>
+
+    <style>
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hello, Welcome To Readit.</h1>
+    
+    <form onsubmit="return false;">
+        <label for="username">Username:</label>
+        <input type="text" id="username"><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password"><br>
+
+        <button type="button" onclick="login()">LOG IN</button>
+    </form>
+
+    <p id="error" style="color:red;"></p>
+
+    <p style="display:inline">If you don't have an account, you can create one </p>
+    <a href="/create">here</a>
+</body>
 </html>
