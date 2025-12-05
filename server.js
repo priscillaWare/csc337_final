@@ -1,166 +1,106 @@
-var {MongoClient} = require('mongodb')
-var express = require('express')
 
-var client = new MongoClient('mongodb://127.0.0.1:27017/')
+var express = require("express");
+var { MongoClient } = require("mongodb");
+var path = require("path");
 
-var app = express()
+var app = express();
 
-client.connect()
-.then(() => {
-    console.log("Connected to MongoDB")
-    db = client.db("ReaditDB")
-    app.listen(8080, () => console.log("Server running on port 3000"))
-})
-.catch(err => console.log(err))
+var client = new MongoClient("mongodb://127.0.0.1:27017/");
 
 
-
-// add a new user
-function insertUser(obj){
-    client.connect()
-    .then(function(){
-        var db = client.db('ReaditdDB')
-        var coll = db.collection('Users')
-        return coll.insertOne(obj)
-    })
-    .then(function(){
-        console.log('added one new user')
-    })
-    .catch(function(err){
-        console.log(err)
-    })
-    .finally(function(){
-        client.close()
-    })
-}
-
-
-// add a new book to the data base
-function insertBook(obj){
-    client.connect()
-    .then(function(){
-        var db = client.db('ReaditdDB')
-        var coll = db.collection('Books')
-        return coll.insertOne(obj)
-    })
-    .then(function(){
-        console.log('inserted one .')
-    })
-    .catch(function(err){
-        console.log(err)
-    })
-    .finally(function(){
-        client.close()
-    })
-}
-
-
-//add a new review
-function insertReview(obj){
-    client.connect()
-    .then(function(){
-        var db = client.db('ReaditdDB')
-        var coll = db.collection('Review')
-        return coll.insertOne(obj)
-    })
-    .then(function(){
-        console.log('inserted one ...')
-    })
-    .catch(function(err){
-        console.log(err)
-    })
-    .finally(function(){
-        client.close()
-    })
-}
-
-// TO DO:
-// update a user's previously read list
-// update a user's current read list
-// update a user's future read list
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname)));
 
 
 
-// landing page
-app.get('/', function(req, res){
-    res.sendFile(__dirname + '/login.html')
-})
-
-// account home
-app.get('/account', function(req, res){
-    res.sendFile(__dirname + '/account.html')
-})
-
-// create an account
-app.get('/create', function(req, res){
-    res.sendFile(__dirname + '/create.html')
-})
-
-// create action
-app.get('/createaction', function(req, res){
-    res.sendFile(__dirname + '/create_action.html')
-})
-
-app.post('/createaction', async (req, res) => {
+async function startServer() {
     try {
-        const { username, password } = req.body
-        await db.collection("Users").insertOne({ username, password })
-        res.send("Account created!")
+        await client.connect();
+        console.log("Connected to MongoDB");
+
+        db = client.db("ReaditdDB");
+
+        app.listen(8080, () => {
+            console.log(`Server running....`);
+        });
     } catch (err) {
-        res.send("Error creating account.")
-        console.log(err)
+        console.error("MongoDB connection failed:", err);
+        process.exit(1);
     }
-})
+}
+
+startServer();
 
 
+
+// homepage but i dont have it yet so it just goes to login.html
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "login.html"));
+});
 
 // login page
-app.get('/login', function(req, res){
-    res.sendFile(__dirname + '/login.html')
-})
+app.get("/login", (req, res) => {
+    res.sendFile(path.join(__dirname, "login.html"));
+});
 
-// login action
-app.get('/loginaction', function(req, res){
-    res.sendFile(__dirname + '/login_action.html')
-})
+// create account page
+app.get("/create", (req, res) => {
+    res.sendFile(path.join(__dirname, "create.html"));
+});
+
+// review page
+app.get("/review", (req, res) => {
+    res.sendFile(path.join(__dirname, "review.html"));
+});
+
+// admin manage page
+app.get("/manage", (req, res) => {
+    res.sendFile(path.join(__dirname, "manage.html"));
+});
 
 
-app.post('/loginaction', async (req, res) => {
+
+// i'm just condensing login and login_action here... i don't want too many files.
+// this handles the login stuff
+app.post("/api/login", async (req, res) => {
+    const { username, password } = req.body;
+
     try {
-        const { username, password } = req.body
-        const user = await db.collection("Users").findOne({ username, password })
-        
-        if (user) {
-            res.send("Login successful!")
+        var user = await db.collection("Users").findOne({ username });
+
+        if (!user) {
+            return res.status(400).json({ error: "User not found" });
         }
-        else {
-            res.send("Invalid credentials")
+        if (user.password !== password) {
+            return res.status(400).json({ error: "Incorrect password" });
         }
+
+        res.json({ message: "Login successful", user });
     } catch (err) {
-        console.log(err)
+        console.error(err);
     }
-})
+});
 
 
+// again condensing create and create_action. i'm just handling it here
+// and in create.html. this works fine but i'm not inserting new users' roles
+// or ids
+app.post("/api/create_account", async (req, res) => {
+    const { username, password } = req.body;
 
-// recommendation page
-app.get('/recommendation', function(req, res){
-    res.sendFile(__dirname + '/recommendation.html')
-})
+    try {
+        var existing = await db.collection("Users").findOne({ username });
 
-// users can leave a review
-app.get('/review', function(req, res){
-    res.sendFile(__dirname + '/review.html')
-})
+        if (existing) {
+            return res.status(400).json({ error: "Username already exists" });
+        }
 
-// admins can approve reviews and book requests
-app.get('/manage', function(req, res){
-    res.sendFile(__dirname + '/manage.html')
-})
+        // still need to insert role and figure out user ids ?
+        await db.collection("Users").insertOne({ username, password });
 
-
-
-
-app.listen(8080, function(){
-    console.log("server running...")
-})
+        res.json({ message: "Account created successfully!" });
+    } catch (err) {
+        console.error(err);
+    }
+});
